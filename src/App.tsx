@@ -5,7 +5,6 @@ import { Header } from './components/Header';
 import { QuestionCard } from './components/QuestionCard';
 import { LeadForm } from './components/LeadForm';
 import { SuccessView } from './components/SuccessView';
-import { ImageLinksModal } from './components/ImageLinksModal';
 import { LeadsDashboard } from './components/LeadsDashboard';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -27,7 +26,6 @@ export default function App() {
   const [isLoadingDiagnostic, setIsLoadingDiagnostic] = useState<boolean>(false);
 
   // Modals state
-  const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
   const [isLeadsModalOpen, setIsLeadsModalOpen] = useState<boolean>(false);
   const [leadCount, setLeadCount] = useState<number>(0);
 
@@ -142,7 +140,6 @@ export default function App() {
         progressPercent={progressPercent}
         canGoBack={currentStep > 1}
         onGoBack={handleGoBack}
-        onOpenImageLinks={() => setIsImageModalOpen(true)}
         onOpenLeads={() => setIsLeadsModalOpen(true)}
         leadCount={leadCount}
       />
@@ -173,7 +170,6 @@ export default function App() {
               answers={answers}
               diagnostic={diagnostic}
               isLoadingDiagnostic={isLoadingDiagnostic}
-              onOpenImageLinks={() => setIsImageModalOpen(true)}
             />
           )}
         </div>
@@ -214,12 +210,6 @@ export default function App() {
           </div>
         </footer>
       )}
-
-      {/* Interactive Direct Image Links Modal */}
-      <ImageLinksModal
-        isOpen={isImageModalOpen}
-        onClose={() => setIsImageModalOpen(false)}
-      />
 
       {/* Admin Leads Dashboard Modal */}
       <LeadsDashboard

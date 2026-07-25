@@ -36,7 +36,13 @@ export async function saveLeadToSupabase(leadData: {
   createdAt: string;
 }) {
   const client = getSupabaseClient();
-  if (!client) return null;
+  if (!client) {
+    return {
+      success: false,
+      reason: 'SUPABASE_NOT_CONFIGURED',
+      message: 'As variáveis SUPABASE_URL e SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY não estão configuradas no ambiente.'
+    };
+  }
 
   try {
     const { data, error } = await client.from('leads').insert({
@@ -45,23 +51,31 @@ export async function saveLeadToSupabase(leadData: {
       whatsapp: leadData.whatsapp,
       email: leadData.email,
       empresa: leadData.empresa,
-      instagram: leadData.instagram,
-      site: leadData.site,
-      atividade_principal: leadData.atividadePrincipal,
-      faturamento_mensal: leadData.faturamentoMensal,
-      principal_desafio: leadData.principalDesafio,
-      canais_marketing: leadData.canaisMarketing,
+      instagram: leadData.instagram || null,
+      site: leadData.site || null,
+      atividade_principal: leadData.atividadePrincipal || null,
+      faturamento_mensal: leadData.faturamentoMensal || null,
+      principal_desafio: leadData.principalDesafio || null,
+      canais_marketing: leadData.canaisMarketing || null,
       created_at: leadData.createdAt,
-    }).select().single();
+    }).select();
 
     if (error) {
-      console.error('Error inserting lead to Supabase:', error.message);
-      return null;
+      console.error('Error inserting lead to Supabase:', error.message, error.details);
+      return {
+        success: false,
+        reason: 'SUPABASE_INSERT_ERROR',
+        message: error.message
+      };
     }
-    return data;
-  } catch (err) {
+    return { success: true, data };
+  } catch (err: any) {
     console.error('Unexpected error inserting lead to Supabase:', err);
-    return null;
+    return {
+      success: false,
+      reason: 'UNEXPECTED_ERROR',
+      message: err?.message || 'Erro inesperado ao conectar ao Supabase'
+    };
   }
 }
 

@@ -30,12 +30,14 @@ CREATE INDEX IF NOT EXISTS idx_leads_email ON public.leads(email);
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Allow anonymous users to insert new leads (for public web survey form)
+DROP POLICY IF EXISTS "Allow public insert on leads" ON public.leads;
 CREATE POLICY "Allow public insert on leads"
   ON public.leads
   FOR INSERT
   WITH CHECK (true);
 
 -- Policy: Allow public read access to leads (or restrict to service role if required)
+DROP POLICY IF EXISTS "Allow public read on leads" ON public.leads;
 CREATE POLICY "Allow public read on leads"
   ON public.leads
   FOR SELECT

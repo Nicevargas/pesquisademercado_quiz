@@ -1,13 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { LeadFormData, QuizAnswers, DiagnosticResult } from '../types';
-import { CheckCircle2, MessageCircle, ShieldCheck, Cpu, Rocket, Image as ImageIcon, ExternalLink, Sparkles } from 'lucide-react';
+import { CheckCircle2, MessageCircle, ShieldCheck, Cpu, Rocket, Sparkles } from 'lucide-react';
 
 interface SuccessViewProps {
   lead: LeadFormData;
   answers: QuizAnswers;
   diagnostic: DiagnosticResult | null;
   isLoadingDiagnostic: boolean;
-  onOpenImageLinks: () => void;
 }
 
 export const SuccessView: React.FC<SuccessViewProps> = ({
@@ -15,7 +14,6 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
   answers,
   diagnostic,
   isLoadingDiagnostic,
-  onOpenImageLinks,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -241,18 +239,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex flex-col justify-between p-6">
-          <div className="flex justify-end">
-            <button
-              onClick={onOpenImageLinks}
-              className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 border border-white/30"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span>Link Direto da Imagem</span>
-              <ExternalLink className="w-3 h-3 ml-0.5" />
-            </button>
-          </div>
-
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex flex-col justify-end p-6">
           <div className="text-white">
             <h4 className="font-bold text-lg sm:text-xl">Sua jornada empreendedora começa aqui.</h4>
             <p className="text-xs sm:text-sm text-slate-200 opacity-90">

@@ -11,6 +11,7 @@ interface LeadsDashboardProps {
 export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose }) => {
   const [leads, setLeads] = useState<SubmissionData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [leadSource, setLeadSource] = useState<'supabase' | 'memory' | null>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -19,6 +20,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
       const data = await res.json();
       if (data.success && Array.isArray(data.leads)) {
         setLeads(data.leads);
+        setLeadSource(data.source || 'memory');
       }
     } catch (e) {
       console.error('Failed to load leads:', e);
@@ -165,11 +167,24 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-            Integrado ao backend Tchê Tech Insights
-          </span>
+        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-wrap gap-2 justify-between items-center text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+              Backend Tchê Tech
+            </span>
+            {leadSource === 'supabase' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Supabase Ativo (Tabela: leads)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title="Defina SUPABASE_URL e SUPABASE_ANON_KEY no servidor">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                Memória do Servidor (Configure SUPABASE_URL no .env)
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-colors"

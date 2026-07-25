@@ -113,7 +113,8 @@ async function startServer() {
       res.json({
         success: true,
         lead: newLead,
-        supabaseSynced: Boolean(supabaseResult)
+        supabaseSynced: Boolean(supabaseResult?.success),
+        supabaseDetails: supabaseResult
       });
     } catch (err: any) {
       console.error("Error saving lead:", err);
