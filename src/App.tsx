@@ -91,7 +91,7 @@ export default function App() {
 
     try {
       // 1. Save lead to backend
-      await fetch('/api/leads', {
+      const leadRes = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,6 +99,8 @@ export default function App() {
           ...answers,
         }),
       });
+      const leadJson = await leadRes.json();
+      const leadId = leadJson?.lead?.id;
       fetchLeadCount();
 
       // 2. Advance to Success View
@@ -111,6 +113,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: leadId,
           ...data,
           ...answers,
         }),
