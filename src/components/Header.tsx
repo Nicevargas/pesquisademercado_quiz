@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60">
                 <img
-                  src="https://lh3.googleusercontent.com/d/1UD73X2aXQvCSAvwE6Zcd-7GacPrYaAbi"
-                  alt="Tchê Tech Insights Logo"
+                  src="https://lh3.googleusercontent.com/d/1hoWCfXF_GKbT5dPqUw0K7P_6FxsRmV6b"
+                  alt="Curtatchê Insights Logo"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                   onError={(e) => {
