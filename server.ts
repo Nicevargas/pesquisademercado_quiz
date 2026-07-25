@@ -8,7 +8,7 @@ import {
   fetchLeadsFromSupabase,
   updateLeadDiagnosticInSupabase,
   getSupabaseClient
-} from "./src/lib/supabaseServer.ts";
+} from "./src/lib/supabaseServer.js";
 
 dotenv.config();
 
