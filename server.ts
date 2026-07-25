@@ -54,82 +54,79 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+app.use(express.json());
 
-  app.use(express.json());
-
-  // API Health Check
-  app.get("/api/health", (req, res) => {
-    const isSupabaseConfigured = Boolean(getSupabaseClient());
-    res.json({
-      status: "ok",
-      supabase: isSupabaseConfigured ? "connected" : "not_configured",
-      timestamp: new Date().toISOString()
-    });
+// API Health Check
+app.get("/api/health", (req, res) => {
+  const isSupabaseConfigured = Boolean(getSupabaseClient());
+  res.json({
+    status: "ok",
+    supabase: isSupabaseConfigured ? "connected" : "not_configured",
+    timestamp: new Date().toISOString()
   });
+});
 
-  // Get all captured leads (from Supabase if available, or memory)
-  app.get("/api/leads", async (req, res) => {
-    try {
-      const supabaseLeads = await fetchLeadsFromSupabase();
-      if (supabaseLeads) {
-        return res.json({
-          success: true,
-          source: "supabase",
-          count: supabaseLeads.length,
-          leads: supabaseLeads
-        });
-      }
-    } catch (e) {
-      console.warn("Supabase fetch fallback to local memory:", e);
+// Get all captured leads (from Supabase if available, or memory)
+app.get("/api/leads", async (req, res) => {
+  try {
+    const supabaseLeads = await fetchLeadsFromSupabase();
+    if (supabaseLeads) {
+      return res.json({
+        success: true,
+        source: "supabase",
+        count: supabaseLeads.length,
+        leads: supabaseLeads
+      });
     }
+  } catch (e) {
+    console.warn("Supabase fetch fallback to local memory:", e);
+  }
+
+  res.json({
+    success: true,
+    source: "memory",
+    count: leadsDatabase.length,
+    leads: leadsDatabase
+  });
+});
+
+// Submit new lead survey
+app.post("/api/leads", async (req, res) => {
+  try {
+    const payload: LeadPayload = req.body;
+    const newLead: StoredLead = {
+      ...payload,
+      id: payload.id || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Always save to memory
+    leadsDatabase.unshift(newLead);
+
+    // Attempt to save to Supabase
+    const supabaseResult = await saveLeadToSupabase(newLead);
 
     res.json({
       success: true,
-      source: "memory",
-      count: leadsDatabase.length,
-      leads: leadsDatabase
+      lead: newLead,
+      supabaseSynced: Boolean(supabaseResult?.success),
+      supabaseDetails: supabaseResult
     });
-  });
+  } catch (err: any) {
+    console.error("Error saving lead:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to save lead." });
+  }
+});
 
-  // Submit new lead survey
-  app.post("/api/leads", async (req, res) => {
-    try {
-      const payload: LeadPayload = req.body;
-      const newLead: StoredLead = {
-        ...payload,
-        id: payload.id || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        createdAt: new Date().toISOString(),
-      };
+// Generate Real AI Diagnostic via Gemini & save to Supabase
+app.post("/api/diagnostico", async (req, res) => {
+  try {
+    const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = req.body;
 
-      // Always save to memory
-      leadsDatabase.unshift(newLead);
+    const ai = getGeminiClient();
 
-      // Attempt to save to Supabase
-      const supabaseResult = await saveLeadToSupabase(newLead);
-
-      res.json({
-        success: true,
-        lead: newLead,
-        supabaseSynced: Boolean(supabaseResult?.success),
-        supabaseDetails: supabaseResult
-      });
-    } catch (err: any) {
-      console.error("Error saving lead:", err);
-      res.status(500).json({ success: false, error: err.message || "Failed to save lead." });
-    }
-  });
-
-  // Generate Real AI Diagnostic via Gemini & save to Supabase
-  app.post("/api/diagnostico", async (req, res) => {
-    try {
-      const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = req.body;
-
-      const ai = getGeminiClient();
-
-      const prompt = `
+    const prompt = `
 Você é um consultor de inteligência de mercado sênior especialista em pequenos negócios, startups e empreendedores (Tchê Tech Insights).
 Análise os dados fornecidos pelo empreendedor:
 - Nome do Empreendedor: ${nome || 'Empreendedor'}
@@ -153,126 +150,126 @@ Gere um diagnóstico de mercado estruturado em formato JSON rigoroso contendo:
 Responda SOMENTE em JSON válido sem marcação de código extra.
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          temperature: 0.7,
-        },
-      });
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.7,
+      },
+    });
 
-      const text = response.text || "{}";
-      let parsed = {};
-      try {
-        parsed = JSON.parse(text);
-      } catch (e) {
-        parsed = {
-          analiseSetor: `Análise personalizada para o setor de ${atividadePrincipal || 'serviços'} focada em superar o desafio de ${principalDesafio || 'atração de clientes'}.`,
-          pontosFortes: [
-            "Atuação direta com demanda real de mercado",
-            "Flexibilidade para implementação rápida de novidades digitais"
-          ],
-          oportunidades: [
-            "Otimização da presença na busca local (Google Meu Negócio)",
-            "Funil de captação de leads direto pelo WhatsApp"
-          ],
-          planoAcao: [
-            "1. Padronizar o atendimento inicial com mensagens automáticas",
-            "2. Criar oferta irresistível de diagnóstico inicial gratuito",
-            "3. Estruturar anúncios direcionados para a sua região"
-          ],
-          resumoWhatsapp: `Olá ${nome || ''}! Fiz seu diagnóstico do projeto ${empresa || ''} no setor de ${atividadePrincipal || 'mercado'}. Podemos conversar sobre o plano de ação?`
-        };
-      }
-
-      // Update lead with diagnostic in local memory
-      if (id) {
-        const found = leadsDatabase.find(l => l.id === id);
-        if (found) {
-          found.diagnostic = parsed;
-        }
-        // Update in Supabase
-        await updateLeadDiagnosticInSupabase(id, parsed);
-      }
-
-      res.json({ success: true, data: parsed });
-    } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      const fallback = {
-        analiseSetor: "Análise estratégica gerada com foco no crescimento sustentável do seu negócio e consolidação de marca no mercado local.",
+    const text = response.text || "{}";
+    let parsed = {};
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      parsed = {
+        analiseSetor: `Análise personalizada para o setor de ${atividadePrincipal || 'serviços'} focada em superar o desafio de ${principalDesafio || 'atração de clientes'}.`,
         pontosFortes: [
-          "Presença ativa no segmento com alto potencial de recomendação",
-          "Agilidade na tomada de decisão em comparação a grandes concorrentes"
+          "Atuação direta com demanda real de mercado",
+          "Flexibilidade para implementação rápida de novidades digitais"
         ],
         oportunidades: [
-          "Automação do funil de WhatsApp para dobrar a taxa de resposta",
-          "Investimento em tráfego pago geolocalizado com foco em conversão"
+          "Otimização da presença na busca local (Google Meu Negócio)",
+          "Funil de captação de leads direto pelo WhatsApp"
         ],
         planoAcao: [
-          "Etapa 1: Estruturar catálogo de serviços/produtos com foco no carro-chefe",
-          "Etapa 2: Implementar canal ativo de vendas e captação diária de leads",
-          "Etapa 3: Monitorar métricas de conversão e custo de aquisição"
+          "1. Padronizar o atendimento inicial com mensagens automáticas",
+          "2. Criar oferta irresistível de diagnóstico inicial gratuito",
+          "3. Estruturar anúncios direcionados para a sua região"
         ],
-        resumoWhatsapp: "Olá! Acabei de gerar o diagnóstico completo para o seu projeto. Vamos conversar sobre as oportunidades?"
+        resumoWhatsapp: `Olá ${nome || ''}! Fiz seu diagnóstico do projeto ${empresa || ''} no setor de ${atividadePrincipal || 'mercado'}. Podemos conversar sobre o plano de ação?`
       };
-
-      if (req.body.id) {
-        await updateLeadDiagnosticInSupabase(req.body.id, fallback);
-      }
-
-      res.json({ success: true, data: fallback });
     }
-  });
 
-  // Direct Image Links Registry Endpoint
-  app.get("/api/images", (req, res) => {
-    const protocol = req.headers['x-forwarded-proto'] || 'http';
-    const host = req.headers.host || `localhost:${PORT}`;
-    const baseUrl = `${protocol}://${host}`;
-
-    const registeredImages = [
-      {
-        id: "tche_logo",
-        name: "Logo Tchê Tech Insights",
-        filename: "tche_logo_1784945402070.jpg",
-        directUrl: `${baseUrl}/src/assets/images/tche_logo_1784945402070.jpg`,
-        relativeUrl: "/src/assets/images/tche_logo_1784945402070.jpg",
-        htmlTag: `<img src="${baseUrl}/src/assets/images/tche_logo_1784945402070.jpg" alt="Tchê Tech Insights Logo" referrerPolicy="no-referrer" />`,
-        description: "Logotipo 3D metálico oficial em alta definição"
-      },
-      {
-        id: "office_workspace",
-        name: "Banner Workspace Market Insights",
-        filename: "office_workspace_1784945414869.jpg",
-        directUrl: `${baseUrl}/src/assets/images/office_workspace_1784945414869.jpg`,
-        relativeUrl: "/src/assets/images/office_workspace_1784945414869.jpg",
-        htmlTag: `<img src="${baseUrl}/src/assets/images/office_workspace_1784945414869.jpg" alt="Market Insights Workspace" referrerPolicy="no-referrer" />`,
-        description: "Ambiente de alta tecnologia para relatório final de diagnóstico"
+    // Update lead with diagnostic in local memory
+    if (id) {
+      const found = leadsDatabase.find(l => l.id === id);
+      if (found) {
+        found.diagnostic = parsed;
       }
-    ];
+      // Update in Supabase
+      await updateLeadDiagnosticInSupabase(id, parsed);
+    }
 
-    res.json({ success: true, baseUrl, images: registeredImages });
-  });
+    res.json({ success: true, data: parsed });
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    const fallback = {
+      analiseSetor: "Análise estratégica gerada com foco no crescimento sustentável do seu negócio e consolidação de marca no mercado local.",
+      pontosFortes: [
+        "Presença ativa no segmento com alto potencial de recomendação",
+        "Agilidade na tomada de decisão em comparação a grandes concorrentes"
+      ],
+      oportunidades: [
+        "Automação do funil de WhatsApp para dobrar a taxa de resposta",
+        "Investimento em tráfego pago geolocalizado com foco em conversão"
+      ],
+      planoAcao: [
+        "Etapa 1: Estruturar catálogo de serviços/produtos com foco no carro-chefe",
+        "Etapa 2: Implementar canal ativo de vendas e captação diária de leads",
+        "Etapa 3: Monitorar métricas de conversão e custo de aquisição"
+      ],
+      resumoWhatsapp: "Olá! Acabei de gerar o diagnóstico completo para o seu projeto. Vamos conversar sobre as oportunidades?"
+    };
 
-  // Vite development middleware vs production static bundle
-  if (process.env.NODE_ENV !== "production") {
+    if (req.body.id) {
+      await updateLeadDiagnosticInSupabase(req.body.id, fallback);
+    }
+
+    res.json({ success: true, data: fallback });
+  }
+});
+
+// Direct Image Links Registry Endpoint
+app.get("/api/images", (req, res) => {
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const host = req.headers.host || 'localhost:3000';
+  const baseUrl = `${protocol}://${host}`;
+
+  const registeredImages = [
+    {
+      id: "tche_logo",
+      name: "Logo Tchê Tech Insights",
+      filename: "tche_logo_1784945402070.jpg",
+      directUrl: `${baseUrl}/src/assets/images/tche_logo_1784945402070.jpg`,
+      relativeUrl: "/src/assets/images/tche_logo_1784945402070.jpg",
+      htmlTag: `<img src="${baseUrl}/src/assets/images/tche_logo_1784945402070.jpg" alt="Tchê Tech Insights Logo" referrerPolicy="no-referrer" />`,
+      description: "Logotipo 3D metálico oficial em alta definição"
+    },
+    {
+      id: "office_workspace",
+      name: "Banner Workspace Market Insights",
+      filename: "office_workspace_1784945414869.jpg",
+      directUrl: `${baseUrl}/src/assets/images/office_workspace_1784945414869.jpg`,
+      relativeUrl: "/src/assets/images/office_workspace_1784945414869.jpg",
+      htmlTag: `<img src="${baseUrl}/src/assets/images/office_workspace_1784945414869.jpg" alt="Market Insights Workspace" referrerPolicy="no-referrer" />`,
+      description: "Ambiente de alta tecnologia para relatório final de diagnóstico"
+    }
+  ];
+
+  res.json({ success: true, baseUrl, images: registeredImages });
+});
+
+// Vite development middleware
+if (process.env.NODE_ENV !== "production") {
+  const startDev = async () => {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
+  };
+  startDev();
+}
 
+export default app;
+
+// Local development server (not used on Vercel)
+if (!process.env.VERCEL) {
+  const PORT = 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
-
-startServer();
