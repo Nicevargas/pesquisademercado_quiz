@@ -54,7 +54,9 @@ function getGeminiClient(): GoogleGenAI {
 const app = express();
 app.use(express.json());
 
-app.get("/api/health", (req, res) => {
+const api = express.Router();
+
+api.get("/health", (req, res) => {
   const isSupabaseConfigured = Boolean(getSupabaseClient());
   res.json({
     status: "ok",
@@ -63,7 +65,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.get("/api/leads", async (req, res) => {
+api.get("/leads", async (req, res) => {
   try {
     const supabaseLeads = await fetchLeadsFromSupabase();
     if (supabaseLeads) {
@@ -86,7 +88,7 @@ app.get("/api/leads", async (req, res) => {
   });
 });
 
-app.post("/api/leads", async (req, res) => {
+api.post("/leads", async (req, res) => {
   try {
     const payload: LeadPayload = req.body;
     const newLead: StoredLead = {
@@ -111,7 +113,7 @@ app.post("/api/leads", async (req, res) => {
   }
 });
 
-app.post("/api/diagnostico", async (req, res) => {
+api.post("/diagnostico", async (req, res) => {
   try {
     const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = req.body;
 
@@ -211,7 +213,7 @@ Responda SOMENTE em JSON válido sem marcação de código extra.
   }
 });
 
-app.get("/api/images", (req, res) => {
+api.get("/images", (req, res) => {
   const protocol = req.headers['x-forwarded-proto'] || 'http';
   const host = req.headers.host || 'localhost:3000';
   const baseUrl = `${protocol}://${host}`;
@@ -239,5 +241,7 @@ app.get("/api/images", (req, res) => {
 
   res.json({ success: true, baseUrl, images: registeredImages });
 });
+
+app.use("/api", api);
 
 export default app;
