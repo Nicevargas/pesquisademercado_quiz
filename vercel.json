@@ -1,8 +1,19 @@
 {
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/" }
+    {
+      "source": "/api/leads",
+      "destination": "/api/leads.ts"
+    },
+    {
+      "source": "/api/diagnostico",
+      "destination": "/api/diagnostico.ts"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health.ts"
+    }
   ]
 }

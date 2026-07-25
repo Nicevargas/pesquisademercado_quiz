@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, RefreshCw, Mail, Phone, Building, Calendar, Sparkles, Instagram, Globe } from 'lucide-react';
 import { SubmissionData } from '../types';
+import { fetchLeadsDirectFromSupabase } from '../lib/supabaseClient';
 
 interface LeadsDashboardProps {
   isOpen: boolean;
@@ -16,14 +17,36 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
   const fetchLeads = async () => {
     setIsLoading(true);
     try {
+      // 1. Try API route first
       const res = await fetch('/api/leads');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.leads)) {
-        setLeads(data.leads);
-        setLeadSource(data.source || 'memory');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.leads) && data.source === 'supabase') {
+          setLeads(data.leads);
+          setLeadSource('supabase');
+          return;
+        }
+        if (data.success && Array.isArray(data.leads) && data.leads.length > 0) {
+          setLeads(data.leads);
+          setLeadSource(data.source || 'memory');
+        }
+      }
+
+      // 2. Direct client fallback if API returns memory or fails
+      const directLeads = await fetchLeadsDirectFromSupabase();
+      if (directLeads && directLeads.length >= 0) {
+        setLeads(directLeads);
+        setLeadSource('supabase');
+        return;
       }
     } catch (e) {
-      console.error('Failed to load leads:', e);
+      console.error('Failed to load leads from API:', e);
+      // Fallback to direct client
+      const directLeads = await fetchLeadsDirectFromSupabase();
+      if (directLeads) {
+        setLeads(directLeads);
+        setLeadSource('supabase');
+      }
     } finally {
       setIsLoading(false);
     }

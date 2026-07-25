@@ -42,11 +42,3 @@ CREATE POLICY "Allow public read on leads"
   ON public.leads
   FOR SELECT
   USING (true);
-
--- Policy: Allow updating leads (diagnostic update from server)
-DROP POLICY IF EXISTS "Allow public update on leads" ON public.leads;
-CREATE POLICY "Allow public update on leads"
-  ON public.leads
-  FOR UPDATE
-  USING (true)
-  WITH CHECK (true);

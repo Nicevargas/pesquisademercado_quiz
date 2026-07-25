@@ -7,6 +7,7 @@ import { LeadForm } from './components/LeadForm';
 import { SuccessView } from './components/SuccessView';
 import { LeadsDashboard } from './components/LeadsDashboard';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase } from './lib/supabaseClient';
 
 export default function App() {
   // Navigation Steps:
@@ -33,12 +34,23 @@ export default function App() {
   const fetchLeadCount = async () => {
     try {
       const res = await fetch('/api/leads');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.leads)) {
-        setLeadCount(data.leads.length);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.leads)) {
+          setLeadCount(data.leads.length);
+          return;
+        }
+      }
+      // Fallback to direct client fetch
+      const direct = await fetchLeadsDirectFromSupabase();
+      if (direct) {
+        setLeadCount(direct.length);
       }
     } catch (e) {
-      // ignore
+      const direct = await fetchLeadsDirectFromSupabase();
+      if (direct) {
+        setLeadCount(direct.length);
+      }
     }
   };
 
@@ -89,18 +101,33 @@ export default function App() {
     setIsSubmittingLead(true);
     setLeadData(data);
 
+    const payload = {
+      ...data,
+      ...answers,
+    };
+
     try {
-      // 1. Save lead to backend
-      const leadRes = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          ...answers,
-        }),
-      });
-      const leadJson = await leadRes.json();
-      const leadId = leadJson?.lead?.id;
+      // 1. Dual save: Try backend API AND direct Supabase insert
+      let apiSuccess = false;
+      try {
+        const apiRes = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (apiRes.ok) {
+          const apiJson = await apiRes.json();
+          apiSuccess = Boolean(apiJson.supabaseSynced);
+        }
+      } catch (apiErr) {
+        console.warn('Backend /api/leads failed or unreachable, relying on direct client Supabase sync:', apiErr);
+      }
+
+      // If API didn't sync to Supabase (e.g. pure Vercel static deployment or missing server env), save directly from browser
+      if (!apiSuccess) {
+        await saveLeadDirectToSupabase(payload);
+      }
+
       fetchLeadCount();
 
       // 2. Advance to Success View
@@ -109,22 +136,23 @@ export default function App() {
 
       // 3. Request Real AI Diagnostic from Gemini
       setIsLoadingDiagnostic(true);
-      const diagRes = await fetch('/api/diagnostico', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: leadId,
-          ...data,
-          ...answers,
-        }),
-      });
-      const diagJson = await diagRes.json();
-      if (diagJson.success && diagJson.data) {
-        setDiagnostic(diagJson.data);
+      try {
+        const diagRes = await fetch('/api/diagnostico', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (diagRes.ok) {
+          const diagJson = await diagRes.json();
+          if (diagJson.success && diagJson.data) {
+            setDiagnostic(diagJson.data);
+          }
+        }
+      } catch (diagErr) {
+        console.warn('Diagnostic API call error:', diagErr);
       }
     } catch (err) {
       console.error('Error in submission flow:', err);
-      // Proceed to success screen anyway with clean fallback
       setCurrentStep(6);
     } finally {
       setIsSubmittingLead(false);
