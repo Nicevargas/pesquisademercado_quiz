@@ -43,9 +43,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <Sparkles className="w-4 h-4 fill-current" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60">
+                <img
+                  src="https://lh3.googleusercontent.com/d/1UD73X2aXQvCSAvwE6Zcd-7GacPrYaAbi"
+                  alt="Tchê Tech Insights Logo"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
               <span className="font-bold text-lg sm:text-xl text-slate-900 dark:text-slate-100 tracking-tight">
                 Market Insights
