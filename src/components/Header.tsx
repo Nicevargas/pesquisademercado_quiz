@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Sparkles, Image as ImageIcon, Users } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   currentStep: number;
@@ -7,9 +7,9 @@ interface HeaderProps {
   progressPercent: number;
   canGoBack: boolean;
   onGoBack: () => void;
-  onOpenImageLinks: () => void;
-  onOpenLeads: () => void;
-  leadCount: number;
+  onOpenImageLinks?: () => void;
+  onOpenLeads?: () => void;
+  leadCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,9 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   progressPercent,
   canGoBack,
   onGoBack,
-  onOpenImageLinks,
-  onOpenLeads,
-  leadCount,
 }) => {
   return (
     <>
@@ -56,33 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Side: Step counter & Utility Action Buttons */}
+          {/* Right Side: Step counter */}
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Direct Image Links Button */}
-            <button
-              onClick={onOpenImageLinks}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-200/60 dark:border-slate-700/60"
-              title="Ver Links Diretos das Imagens HTML"
-            >
-              <ImageIcon className="w-4 h-4 text-blue-600" />
-              <span className="hidden sm:inline">Links das Imagens</span>
-            </button>
-
-            {/* Admin Leads View Button */}
-            <button
-              onClick={onOpenLeads}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 relative"
-              title="Ver Leads Recebidos"
-            >
-              <Users className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-              <span className="hidden sm:inline">Leads</span>
-              {leadCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs font-bold bg-blue-600 text-white rounded-full">
-                  {leadCount}
-                </span>
-              )}
-            </button>
-
             {/* Step Badge */}
             <div className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-700/50">
               {currentStep <= totalSteps ? (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LeadFormData } from '../types';
-import { User, Phone, Mail, Building, Lock, Send, Loader2 } from 'lucide-react';
+import { User, Phone, Mail, Building, Lock, Send, Loader2, Instagram, Globe } from 'lucide-react';
 
 interface LeadFormProps {
   onSubmit: (data: LeadFormData) => void;
@@ -13,6 +13,8 @@ export const LeadForm: React.FC<LeadFormProps> = ({ onSubmit, isSubmitting }) =>
     whatsapp: '',
     email: '',
     empresa: '',
+    instagram: '',
+    site: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -169,6 +171,42 @@ export const LeadForm: React.FC<LeadFormProps> = ({ onSubmit, isSubmitting }) =>
                 />
               </div>
               {errors.empresa && <p className="text-xs text-red-500">{errors.empresa}</p>}
+            </div>
+
+            {/* Instagram (Opcional para análise) */}
+            <div className="space-y-1.5">
+              <label htmlFor="instagram" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Instagram da Empresa <span className="text-slate-400 font-normal">(Opcional)</span>
+              </label>
+              <div className="relative">
+                <Instagram className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="instagram"
+                  type="text"
+                  value={formData.instagram || ''}
+                  onChange={(e) => handleChange('instagram', e.target.value)}
+                  placeholder="@suaempresa"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Site / Link (Opcional para análise) */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label htmlFor="site" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Site ou Link do Negócio <span className="text-slate-400 font-normal">(Opcional)</span>
+              </label>
+              <div className="relative">
+                <Globe className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="site"
+                  type="text"
+                  value={formData.site || ''}
+                  onChange={(e) => handleChange('site', e.target.value)}
+                  placeholder="www.suaempresa.com.br ou linktree"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                />
+              </div>
             </div>
           </div>
 

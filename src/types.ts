@@ -16,6 +16,8 @@ export interface LeadFormData {
   whatsapp: string;
   email: string;
   empresa: string;
+  instagram?: string;
+  site?: string;
 }
 
 export interface QuizAnswers {

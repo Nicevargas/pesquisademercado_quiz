@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS public.leads (
   whatsapp TEXT NOT NULL,
   email TEXT NOT NULL,
   empresa TEXT NOT NULL,
+  instagram TEXT,
+  site TEXT,
   atividade_principal TEXT,
   faturamento_mensal TEXT,
   principal_desafio TEXT,
@@ -14,6 +16,10 @@ CREATE TABLE IF NOT EXISTS public.leads (
   diagnostic_data JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Ensure columns exist if table was previously created
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS instagram TEXT;
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS site TEXT;
 
 -- Index for ordering by creation date
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at DESC);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, RefreshCw, Mail, Phone, Building, Calendar, Sparkles } from 'lucide-react';
+import { X, Users, RefreshCw, Mail, Phone, Building, Calendar, Sparkles, Instagram, Globe } from 'lucide-react';
 import { SubmissionData } from '../types';
 
 interface LeadsDashboardProps {
@@ -116,8 +116,20 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{lead.email}</span>
+                    <span className="truncate">{lead.email}</span>
                   </div>
+                  {lead.instagram && (
+                    <div className="flex items-center gap-1.5">
+                      <Instagram className="w-3.5 h-3.5 text-pink-500" />
+                      <span className="font-medium">{lead.instagram}</span>
+                    </div>
+                  )}
+                  {lead.site && (
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="truncate font-medium">{lead.site}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Survey responses summary */}

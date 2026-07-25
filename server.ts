@@ -18,6 +18,8 @@ interface LeadPayload {
   whatsapp: string;
   email: string;
   empresa: string;
+  instagram?: string;
+  site?: string;
   atividadePrincipal?: string;
   faturamentoMensal?: string;
   principalDesafio?: string;
@@ -122,7 +124,7 @@ async function startServer() {
   // Generate Real AI Diagnostic via Gemini & save to Supabase
   app.post("/api/diagnostico", async (req, res) => {
     try {
-      const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa } = req.body;
+      const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = req.body;
 
       const ai = getGeminiClient();
 
@@ -131,10 +133,14 @@ Você é um consultor de inteligência de mercado sênior especialista em pequen
 Análise os dados fornecidos pelo empreendedor:
 - Nome do Empreendedor: ${nome || 'Empreendedor'}
 - Empresa / Projeto: ${empresa || 'Negócio local'}
+- Instagram: ${instagram || 'Não informado'}
+- Site / Link: ${site || 'Não informado'}
 - Setor / Atividade: ${atividadePrincipal || 'Serviços'}
 - Faturamento Estimado: ${faturamentoMensal || 'Não informado'}
 - Principal Desafio: ${principalDesafio || 'Atrair mais clientes'}
 - Canais de Marketing Usados: ${canaisMarketing || 'Instagram/Redes Sociais'}
+
+Se o Instagram (${instagram}) ou o Site (${site}) forem informados, leve em consideração a maturidade da presença digital dele e faça recomendações específicas de posicionamento no Instagram/Site no plano de ação e oportunidades.
 
 Gere um diagnóstico de mercado estruturado em formato JSON rigoroso contendo:
 1. "analiseSetor": Texto curto (2-3 frases) analisando a conjuntura do setor dele.

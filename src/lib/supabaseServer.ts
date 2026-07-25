@@ -27,6 +27,8 @@ export async function saveLeadToSupabase(leadData: {
   whatsapp: string;
   email: string;
   empresa: string;
+  instagram?: string;
+  site?: string;
   atividadePrincipal?: string;
   faturamentoMensal?: string;
   principalDesafio?: string;
@@ -43,6 +45,8 @@ export async function saveLeadToSupabase(leadData: {
       whatsapp: leadData.whatsapp,
       email: leadData.email,
       empresa: leadData.empresa,
+      instagram: leadData.instagram,
+      site: leadData.site,
       atividade_principal: leadData.atividadePrincipal,
       faturamento_mensal: leadData.faturamentoMensal,
       principal_desafio: leadData.principalDesafio,
@@ -104,6 +108,8 @@ export async function fetchLeadsFromSupabase() {
       whatsapp: item.whatsapp,
       email: item.email,
       empresa: item.empresa,
+      instagram: item.instagram,
+      site: item.site,
       atividadePrincipal: item.atividade_principal,
       faturamentoMensal: item.faturamento_mensal,
       principalDesafio: item.principal_desafio,
