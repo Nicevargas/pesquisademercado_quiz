@@ -112,10 +112,16 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="font-mono">{lead.whatsapp}</span>
-                  </div>
+                  <a
+                    href={`https://wa.me/55${lead.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${lead.nome}! Vi seu formulário de diagnóstico da empresa ${lead.empresa}.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:underline font-mono font-medium"
+                    title="Abrir conversa no WhatsApp com este Lead"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{lead.whatsapp}</span>
+                  </a>
                   <div className="flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-400" />
                     <span className="truncate">{lead.email}</span>

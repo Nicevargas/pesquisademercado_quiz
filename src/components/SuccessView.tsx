@@ -72,12 +72,15 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
     };
   }, []);
 
+  const companyWhatsapp = '5511994637159';
   const whatsappMessage = encodeURIComponent(
-    `Olá! Sou ${lead.nome} da empresa ${lead.empresa}. Acabei de preencher a pesquisa Market Insights no site e gostaria de receber o meu diagnóstico de mercado detalhado!`
+    `Olá! Sou ${lead.nome} da empresa ${lead.empresa}.\n\n` +
+    `Acabei de preencher a pesquisa Market Insights no site e gostaria de receber o meu diagnóstico de mercado detalhado!` +
+    (lead.instagram ? `\nInstagram: ${lead.instagram}` : '') +
+    (lead.site ? `\nSite: ${lead.site}` : '')
   );
 
-  const cleanPhone = lead.whatsapp.replace(/\D/g, '');
-  const whatsappUrl = `https://wa.me/55${cleanPhone || '00000000000'}?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/${companyWhatsapp}?text=${whatsappMessage}`;
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 relative">
@@ -118,7 +121,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
             <span>QUERO RECEBER MEU DIAGNÓSTICO</span>
           </a>
           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Tempo de resposta médio: 24 horas
+            Atendimento via WhatsApp: (11) 99463-7159 • Resposta em até 24h
           </span>
         </div>
       </div>
