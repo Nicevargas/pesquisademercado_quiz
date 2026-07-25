@@ -1,0 +1,118 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+let supabaseInstance: SupabaseClient | null = null;
+
+export function getSupabaseClient(): SupabaseClient | null {
+  if (supabaseInstance) return supabaseInstance;
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (url && key && url !== 'https://your-project.supabase.co' && !url.includes('your-project')) {
+    try {
+      supabaseInstance = createClient(url, key);
+      return supabaseInstance;
+    } catch (err) {
+      console.warn('Failed to initialize Supabase client:', err);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+export async function saveLeadToSupabase(leadData: {
+  id: string;
+  nome: string;
+  whatsapp: string;
+  email: string;
+  empresa: string;
+  atividadePrincipal?: string;
+  faturamentoMensal?: string;
+  principalDesafio?: string;
+  canaisMarketing?: string;
+  createdAt: string;
+}) {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client.from('leads').insert({
+      id: leadData.id,
+      nome: leadData.nome,
+      whatsapp: leadData.whatsapp,
+      email: leadData.email,
+      empresa: leadData.empresa,
+      atividade_principal: leadData.atividadePrincipal,
+      faturamento_mensal: leadData.faturamentoMensal,
+      principal_desafio: leadData.principalDesafio,
+      canais_marketing: leadData.canaisMarketing,
+      created_at: leadData.createdAt,
+    }).select().single();
+
+    if (error) {
+      console.error('Error inserting lead to Supabase:', error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error('Unexpected error inserting lead to Supabase:', err);
+    return null;
+  }
+}
+
+export async function updateLeadDiagnosticInSupabase(leadId: string, diagnosticData: any) {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('leads')
+      .update({ diagnostic_data: diagnosticData })
+      .eq('id', leadId)
+      .select();
+
+    if (error) {
+      console.error('Error updating diagnostic in Supabase:', error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error('Unexpected error updating diagnostic in Supabase:', err);
+    return null;
+  }
+}
+
+export async function fetchLeadsFromSupabase() {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching leads from Supabase:', error.message);
+      return null;
+    }
+
+    return data.map((item: any) => ({
+      id: item.id,
+      nome: item.nome,
+      whatsapp: item.whatsapp,
+      email: item.email,
+      empresa: item.empresa,
+      atividadePrincipal: item.atividade_principal,
+      faturamentoMensal: item.faturamento_mensal,
+      principalDesafio: item.principal_desafio,
+      canaisMarketing: item.canais_marketing,
+      createdAt: item.created_at,
+      diagnostic: item.diagnostic_data,
+    }));
+  } catch (err) {
+    console.error('Unexpected error fetching leads from Supabase:', err);
+    return null;
+  }
+}

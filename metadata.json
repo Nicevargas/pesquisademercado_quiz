@@ -1,0 +1,6 @@
+{
+  "name": "Tchê Tech Insights",
+  "description": "Pesquisa de mercado e geração de diagnósticos estratégicos para microempreendedores",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
