@@ -101,7 +101,11 @@ export default function App() {
     setIsSubmittingLead(true);
     setLeadData(data);
 
+    // Generate a consistent ID upfront so the diagnostic endpoint can reference the same lead
+    const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
     const payload = {
+      id: leadId,
       ...data,
       ...answers,
     };
@@ -134,7 +138,7 @@ export default function App() {
       setCurrentStep(6);
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // 3. Request Real AI Diagnostic from Gemini
+      // 3. Request Real AI Diagnostic from Gemini (includes lead id so diagnostic gets saved to DB)
       setIsLoadingDiagnostic(true);
       try {
         const diagRes = await fetch('/api/diagnostico', {

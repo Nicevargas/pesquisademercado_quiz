@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LeadFormData, QuizAnswers, DiagnosticResult } from '../types';
 import { CheckCircle2, MessageCircle, ShieldCheck, Cpu, Rocket, Sparkles, Download, FileText, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
+import officeWorkspaceImg from '../assets/images/office_workspace_1784945414869.jpg';
 
 interface SuccessViewProps {
   lead: LeadFormData;
@@ -463,7 +464,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
       {/* Visual Workspace Banner Section */}
       <div className="rounded-2xl overflow-hidden relative h-64 sm:h-72 shadow-lg border border-slate-200/80 dark:border-slate-800 group">
         <img
-          src="/src/assets/images/office_workspace_1784945414869.jpg"
+          src={officeWorkspaceImg}
           alt="High tech office workspace for market insights"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
