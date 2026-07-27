@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, RefreshCw, Mail, Phone, Building, Calendar, Sparkles, Instagram, Globe } from 'lucide-react';
+import { X, Users, RefreshCw, Mail, Phone, Building, Calendar, Sparkles, Instagram, Globe, MessageCircle, Copy, Check, Send, ExternalLink, Share2 } from 'lucide-react';
 import { SubmissionData } from '../types';
 import { fetchLeadsDirectFromSupabase } from '../lib/supabaseClient';
+import { formatFullReportText } from '../lib/webhookAutoSend';
 
 interface LeadsDashboardProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
   const [leads, setLeads] = useState<SubmissionData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [leadSource, setLeadSource] = useState<'supabase' | 'memory' | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -188,6 +190,80 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ isOpen, onClose 
                     <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
                       {lead.canaisMarketing || 'N/A'}
                     </span>
+                  </div>
+                </div>
+
+                {/* Dispatch Report Actions */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={`https://wa.me/55${lead.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(formatFullReportText(lead, (lead as any).diagnostic))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[11px] transition-all shadow-xs"
+                      title="Enviar relatório formatado diretamente para o WhatsApp deste lead"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    <a
+                      href={`/?relatorio=${encodeURIComponent(lead.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[11px] transition-all shadow-xs"
+                      title="Abrir página do relatório na Web"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Ver Web</span>
+                      <ExternalLink className="w-3 h-3 opacity-80" />
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const link = `${window.location.origin}/?relatorio=${encodeURIComponent(lead.id)}`;
+                        navigator.clipboard.writeText(link);
+                        setCopiedId(`link_${lead.id}`);
+                        setTimeout(() => setCopiedId(null), 2500);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[11px] font-medium transition-colors"
+                      title="Copiar Link da Página Web do Relatório"
+                    >
+                      {copiedId === `link_${lead.id}` ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Link Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Copiar Link</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(formatFullReportText(lead, (lead as any).diagnostic));
+                        setCopiedId(lead.id);
+                        setTimeout(() => setCopiedId(null), 2500);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[11px] font-medium transition-colors"
+                    >
+                      {copiedId === lead.id ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copiar Texto</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

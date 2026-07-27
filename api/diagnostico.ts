@@ -1,24 +1,24 @@
 import { GoogleGenAI } from '@google/genai';
-import { updateLeadDiagnosticInSupabase } from '../src/lib/supabaseServer.js';
+import { updateLeadDiagnosticInSupabase } from '../src/lib/supabaseServer.ts';
 
 export default async function handler(req: any, res: any) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
-
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
-
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = body;
 
@@ -95,7 +95,7 @@ Responda SOMENTE em JSON válido sem marcação de código extra.
 
     return res.status(200).json({ success: true, data: parsed });
   } catch (err: any) {
-    console.error('Vercel api/diagnostico error:', err);
-    return res.status(500).json({ success: false, error: err?.message || 'Erro ao gerar diagnóstico.' });
+    console.error('Vercel api/diagnostico POST error:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Error generating diagnostic' });
   }
 }

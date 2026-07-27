@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LeadFormData, QuizAnswers, DiagnosticResult } from '../types';
-import { CheckCircle2, MessageCircle, ShieldCheck, Cpu, Rocket, Sparkles, Download, FileText, Loader2 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import officeWorkspaceImg from '../assets/images/office_workspace_1784945414869.jpg';
+import { CheckCircle2, MessageCircle, ShieldCheck, Cpu, Rocket, Sparkles, Copy, Check, Zap, Database, Send, Share2, ExternalLink, Globe } from 'lucide-react';
+import { formatFullReportText, triggerAutoWebhookSend } from '../lib/webhookAutoSend';
 
 interface SuccessViewProps {
   lead: LeadFormData;
@@ -18,7 +17,17 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
   isLoadingDiagnostic,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copiedWebLink, setCopiedWebLink] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<string | null>(null);
+
+  const webReportUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/?relatorio=${encodeURIComponent(lead.id)}`;
+
+  const handleCopyWebLink = () => {
+    navigator.clipboard.writeText(webReportUrl);
+    setCopiedWebLink(true);
+    setTimeout(() => setCopiedWebLink(false), 3000);
+  };
 
   // Confetti effect on mount
   useEffect(() => {
@@ -75,209 +84,27 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
     };
   }, []);
 
-  const companyWhatsapp = '5511994637159';
-  const whatsappMessage = encodeURIComponent(
-    `Olá! Sou ${lead.nome} da empresa ${lead.empresa}.\n\n` +
-    `Acabei de preencher a pesquisa Market Insights no site e gostaria de receber o meu diagnóstico de mercado detalhado!` +
-    (lead.instagram ? `\nInstagram: ${lead.instagram}` : '') +
-    (lead.site ? `\nSite: ${lead.site}` : '')
-  );
-
-  const whatsappUrl = `https://wa.me/${companyWhatsapp}?text=${whatsappMessage}`;
-
-  const handleDownloadPDF = () => {
-    setIsGeneratingPdf(true);
-    try {
-      const doc = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
+  // Trigger automated webhook dispatch when diagnostic becomes available
+  useEffect(() => {
+    if (diagnostic) {
+      triggerAutoWebhookSend(lead, diagnostic).then((res) => {
+        if (res.sent) {
+          setWebhookStatus('Relatório enviado automaticamente via Webhook!');
+        }
       });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let y = 18;
-
-      // Header Brand Banner
-      doc.setFillColor(15, 23, 42); // slate-900
-      doc.rect(0, 0, pageWidth, 28, 'F');
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(15);
-      doc.text('TCHÊ TECH INSIGHTS', 15, 12);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(148, 163, 184); // slate-400
-      doc.text('Relatório & Diagnóstico Estratégico de Mercado', 15, 19);
-
-      const today = new Date().toLocaleDateString('pt-BR');
-      doc.setFontSize(8.5);
-      doc.text(`Data: ${today}`, pageWidth - 15, 19, { align: 'right' });
-
-      y = 36;
-
-      // Section 1: Perfil do Empreendedor
-      doc.setFillColor(241, 245, 249); // slate-100
-      doc.roundedRect(15, y, pageWidth - 30, 36, 2, 2, 'F');
-
-      doc.setTextColor(30, 41, 59); // slate-800
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('1. Informações do Negócio', 20, y + 8);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-
-      doc.text(`Empreendedor: ${lead.nome || 'N/I'}`, 20, y + 16);
-      doc.text(`Empresa / Projeto: ${lead.empresa || 'N/I'}`, 20, y + 22);
-      doc.text(`E-mail: ${lead.email || 'N/I'}`, 20, y + 28);
-
-      doc.text(`WhatsApp: ${lead.whatsapp || 'N/I'}`, 110, y + 16);
-      doc.text(`Instagram: ${lead.instagram || 'Não informado'}`, 110, y + 22);
-      doc.text(`Site: ${lead.site || 'Não informado'}`, 110, y + 28);
-
-      y += 44;
-
-      // Section 2: Resumo da Pesquisa
-      if (answers.atividadePrincipal || answers.faturamentoMensal || answers.principalDesafio) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(30, 41, 59);
-        doc.text('2. Mapeamento de Mercado', 15, y);
-        y += 6;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        if (answers.atividadePrincipal) {
-          doc.text(`• Setor / Atividade Principal: ${answers.atividadePrincipal}`, 18, y);
-          y += 5;
-        }
-        if (answers.faturamentoMensal) {
-          doc.text(`• Faturamento Mensal Estimado: ${answers.faturamentoMensal}`, 18, y);
-          y += 5;
-        }
-        if (answers.principalDesafio) {
-          doc.text(`• Principal Desafio Atual: ${answers.principalDesafio}`, 18, y);
-          y += 5;
-        }
-        if (answers.canaisMarketing && answers.canaisMarketing.length > 0) {
-          doc.text(`• Canais de Divulgação Utilizados: ${answers.canaisMarketing.join(', ')}`, 18, y);
-          y += 5;
-        }
-        y += 4;
-      }
-
-      // Section 3: AI Diagnostic
-      if (diagnostic) {
-        doc.setFillColor(30, 41, 59); // slate-800
-        doc.rect(15, y, pageWidth - 30, 8, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text('3. Diagnóstico Estratégico de IA (Tchê Tech Insights)', 18, y + 5.5);
-
-        y += 14;
-
-        // Análise do setor
-        doc.setTextColor(37, 99, 235); // blue-600
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.text('Análise Conjuntural do Setor:', 15, y);
-        y += 5;
-
-        doc.setTextColor(51, 65, 85);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        const splitAnalise = doc.splitTextToSize(diagnostic.analiseSetor, pageWidth - 30);
-        doc.text(splitAnalise, 15, y);
-        y += splitAnalise.length * 4.2 + 4;
-
-        // Check for page overflow
-        if (y > pageHeight - 60) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Pontos Fortes
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(16, 185, 129); // emerald-600
-        doc.text('Pontos Fortes Identificados:', 15, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(51, 65, 85);
-        diagnostic.pontosFortes.forEach((pf) => {
-          const splitPf = doc.splitTextToSize(`• ${pf}`, pageWidth - 30);
-          doc.text(splitPf, 15, y);
-          y += splitPf.length * 4.2;
-        });
-
-        y += 3;
-        if (y > pageHeight - 50) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Oportunidades
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(147, 51, 234); // purple-600
-        doc.text('Oportunidades de Crescimento:', 15, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(51, 65, 85);
-        diagnostic.oportunidades.forEach((op) => {
-          const splitOp = doc.splitTextToSize(`• ${op}`, pageWidth - 30);
-          doc.text(splitOp, 15, y);
-          y += splitOp.length * 4.2;
-        });
-
-        y += 4;
-        if (y > pageHeight - 50) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Plano de Ação
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(37, 99, 235);
-        doc.text('Plano de Ação Recomendado:', 15, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(51, 65, 85);
-        diagnostic.planoAcao.forEach((acao, idx) => {
-          const splitAcao = doc.splitTextToSize(`${idx + 1}. ${acao}`, pageWidth - 30);
-          doc.text(splitAcao, 15, y);
-          y += splitAcao.length * 4.2;
-        });
-      }
-
-      // Footer
-      const footerY = pageHeight - 12;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(15, footerY - 4, pageWidth - 15, footerY - 4);
-
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Tchê Tech Insights • WhatsApp: (11) 99463-7159', 15, footerY);
-      doc.text('Relatório gerado em formato PDF', pageWidth - 15, footerY, { align: 'right' });
-
-      // Save PDF
-      const sanitizedCompany = (lead.empresa || 'empresa').toLowerCase().replace(/[^a-z0-9]/g, '_');
-      doc.save(`Diagnostico_Estrategico_${sanitizedCompany}.pdf`);
-    } catch (err) {
-      console.error('Erro ao gerar PDF:', err);
-      alert('Não foi possível gerar o PDF. Tente novamente.');
-    } finally {
-      setIsGeneratingPdf(false);
     }
+  }, [diagnostic, lead]);
+
+  const companyWhatsapp = '5511994637159';
+
+  // Full report formatted for WhatsApp dispatch
+  const fullReportText = formatFullReportText({ ...lead, ...answers }, diagnostic);
+  const fullWhatsappUrl = `https://wa.me/${companyWhatsapp}?text=${encodeURIComponent(fullReportText)}`;
+
+  const handleCopyReport = () => {
+    navigator.clipboard.writeText(fullReportText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
   };
 
   return (
@@ -307,34 +134,127 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
           Em breve nossa equipe analisará suas respostas. Se você solicitou o diagnóstico gratuito, entraremos em contato pelo WhatsApp.
         </p>
 
-        {/* WhatsApp & PDF Call To Action Buttons */}
+        {/* WhatsApp & Report Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
-            href={whatsappUrl}
+            href={fullWhatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-95 text-sm sm:text-base"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-95 text-base"
           >
-            <MessageCircle className="w-5 h-5 fill-current" />
-            <span>QUERO RECEBER MEU DIAGNÓSTICO</span>
+            <MessageCircle className="w-5 h-5 fill-current text-white" />
+            <span>DISPARAR RELATÓRIO NO WHATSAPP</span>
+          </a>
+
+          <a
+            href={webReportUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-600/30 transition-all duration-200 active:scale-95 text-base"
+          >
+            <Globe className="w-5 h-5 text-white" />
+            <span>Acessar Relatório Web</span>
+            <ExternalLink className="w-4 h-4 opacity-80" />
           </a>
 
           <button
-            onClick={handleDownloadPDF}
-            disabled={isGeneratingPdf}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold px-6 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 transition-all duration-200 active:scale-95 text-sm sm:text-base disabled:opacity-50"
+            onClick={handleCopyWebLink}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold px-5 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 transition-all duration-200 active:scale-95 text-base"
           >
-            {isGeneratingPdf ? (
-              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            {copiedWebLink ? (
+              <>
+                <Check className="w-5 h-5 text-emerald-500" />
+                <span>Link Web Copiado!</span>
+              </>
             ) : (
-              <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <>
+                <Share2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span>Copiar Link Web</span>
+              </>
             )}
-            <span>{isGeneratingPdf ? 'Gerando PDF...' : 'Baixar Diagnóstico em PDF'}</span>
           </button>
         </div>
         <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block mt-3">
           Atendimento via WhatsApp: (11) 99463-7159 • Resposta em até 24h
         </span>
+      </div>
+
+      {/* Automated Delivery System Explanation Card */}
+      <div className="bg-gradient-to-br from-blue-900/90 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl border border-blue-800/60 space-y-5">
+        <div className="flex items-center justify-between border-b border-blue-800/80 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-blue-600/30 rounded-lg text-blue-400 border border-blue-500/30">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base sm:text-lg text-slate-100">
+                Sistema Automático de Envio de Relatório
+              </h3>
+              <p className="text-xs text-blue-300">Como o seu diagnóstico é processado e entregue</p>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800/60 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Ativo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex items-start gap-3">
+            <div className="p-2 bg-blue-950 rounded-lg text-blue-400 shrink-0">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-0.5">1. Diagnóstico por IA</h4>
+              <p className="text-slate-400 leading-relaxed">
+                Análise do seu setor e plano de ação estruturados automaticamente pelo modelo Gemini AI.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex items-start gap-3">
+            <div className="p-2 bg-purple-950 rounded-lg text-purple-400 shrink-0">
+              <Database className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-0.5">2. Salvamento no Banco</h4>
+              <p className="text-slate-400 leading-relaxed">
+                Dados e diagnóstico salvos instantaneamente no Supabase Cloud para consulta posterior.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex items-start gap-3">
+            <div className="p-2 bg-emerald-950 rounded-lg text-emerald-400 shrink-0">
+              <Send className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-0.5">3. Envio 1-Clique no WhatsApp</h4>
+              <p className="text-slate-400 leading-relaxed">
+                Mensagem formatada com todos os pontos do relatório pronta para ser enviada diretamente.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex items-start gap-3">
+            <div className="p-2 bg-amber-950 rounded-lg text-amber-400 shrink-0">
+              <Share2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-200 mb-0.5">4. Disparo por Webhook / CRM</h4>
+              <p className="text-slate-400 leading-relaxed">
+                Integração automática com Zapier, Make.com, n8n, Z-API ou Evolution API quando configurado.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {webhookStatus && (
+          <div className="p-2.5 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{webhookStatus}</span>
+          </div>
+        )}
       </div>
 
       {/* AI Market Diagnostic Generated Card */}
@@ -408,22 +328,6 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
                 ))}
               </div>
             </div>
-
-            {/* Quick PDF Export inside Card */}
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isGeneratingPdf}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isGeneratingPdf ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>Baixar Diagnóstico em PDF</span>
-              </button>
-            </div>
           </div>
         ) : null}
       </div>
@@ -464,7 +368,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
       {/* Visual Workspace Banner Section */}
       <div className="rounded-2xl overflow-hidden relative h-64 sm:h-72 shadow-lg border border-slate-200/80 dark:border-slate-800 group">
         <img
-          src={officeWorkspaceImg}
+          src="/src/assets/images/office_workspace_1784945414869.jpg"
           alt="High tech office workspace for market insights"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"

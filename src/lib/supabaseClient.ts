@@ -94,3 +94,40 @@ export async function fetchLeadsDirectFromSupabase() {
     return null;
   }
 }
+
+export async function fetchSingleLeadDirectFromSupabase(leadId: string) {
+  const client = getClientSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (error || !data) {
+      console.error('Direct single lead fetch error:', error?.message);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      nome: data.nome,
+      whatsapp: data.whatsapp,
+      email: data.email,
+      empresa: data.empresa,
+      instagram: data.instagram,
+      site: data.site,
+      atividadePrincipal: data.atividade_principal,
+      faturamentoMensal: data.faturamento_mensal,
+      principalDesafio: data.principal_desafio,
+      canaisMarketing: data.canais_marketing,
+      createdAt: data.created_at,
+      diagnostic: data.diagnostic_data,
+    };
+  } catch (e) {
+    console.error('Direct single lead fetch unexpected error:', e);
+    return null;
+  }
+}

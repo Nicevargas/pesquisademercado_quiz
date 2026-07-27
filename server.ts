@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import {
   saveLeadToSupabase,
   fetchLeadsFromSupabase,
+  fetchSingleLeadFromSupabase,
   updateLeadDiagnosticInSupabase,
   getSupabaseClient
 } from "./src/lib/supabaseServer.ts";
@@ -222,6 +223,36 @@ Responda SOMENTE em JSON válido sem marcação de código extra.
       }
 
       res.json({ success: true, data: fallback });
+    }
+  });
+
+  // Get single lead report by ID
+  app.get("/api/relatorio", async (req, res) => {
+    const id = (req.query.id || req.query.relatorio) as string;
+    if (!id) {
+      return res.status(400).json({ error: "Missing lead ID parameter (?id=xxx)" });
+    }
+
+    try {
+      // 1. Try memory
+      const inMemory = leadsDatabase.find(l => l.id === id);
+      if (inMemory && inMemory.diagnostic) {
+        return res.json({ success: true, lead: inMemory });
+      }
+
+      // 2. Try Supabase
+      const supabaseLead = await fetchSingleLeadFromSupabase(id);
+      if (supabaseLead) {
+        return res.json({ success: true, lead: supabaseLead });
+      }
+
+      if (inMemory) {
+        return res.json({ success: true, lead: inMemory });
+      }
+
+      return res.status(404).json({ success: false, error: "Relatório não encontrado" });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e?.message || "Erro no servidor" });
     }
   });
 

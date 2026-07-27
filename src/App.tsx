@@ -6,15 +6,39 @@ import { QuestionCard } from './components/QuestionCard';
 import { LeadForm } from './components/LeadForm';
 import { SuccessView } from './components/SuccessView';
 import { LeadsDashboard } from './components/LeadsDashboard';
+import { PublicReportPage } from './components/PublicReportPage';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase } from './lib/supabaseClient';
 
 export default function App() {
+  // Check if URL has ?relatorio=ID or ?id=ID or hash #relatorio/ID
+  const getUrlReportId = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramId = urlParams.get('relatorio') || urlParams.get('id');
+    if (paramId) return paramId;
+
+    if (window.location.hash.startsWith('#relatorio/')) {
+      return window.location.hash.replace('#relatorio/', '');
+    }
+    return null;
+  };
+
+  const [publicReportId, setPublicReportId] = useState<string | null>(getUrlReportId());
+
   // Navigation Steps:
   // 1..4 = Quiz Questions (1-4)
   // 5    = Lead Form Capture ("Etapa Final")
   // 6    = Success View & AI Diagnostic
   const [currentStep, setCurrentStep] = useState<number>(1);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPublicReportId(getUrlReportId());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // User Selections
   const [answers, setAnswers] = useState<QuizAnswers>({});
@@ -101,11 +125,7 @@ export default function App() {
     setIsSubmittingLead(true);
     setLeadData(data);
 
-    // Generate a consistent ID upfront so the diagnostic endpoint can reference the same lead
-    const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
     const payload = {
-      id: leadId,
       ...data,
       ...answers,
     };
@@ -138,7 +158,7 @@ export default function App() {
       setCurrentStep(6);
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // 3. Request Real AI Diagnostic from Gemini (includes lead id so diagnostic gets saved to DB)
+      // 3. Request Real AI Diagnostic from Gemini
       setIsLoadingDiagnostic(true);
       try {
         const diagRes = await fetch('/api/diagnostico', {
@@ -165,6 +185,20 @@ export default function App() {
   };
 
   const isCurrentStepAnswered = currentStep <= 4 ? Boolean(selectedOptionsByStep[currentStep]) : true;
+
+  if (publicReportId) {
+    return (
+      <PublicReportPage
+        reportId={publicReportId}
+        onBackToHome={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', window.location.pathname);
+          }
+          setPublicReportId(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col justify-between selection:bg-blue-600 selection:text-white">
