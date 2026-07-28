@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { updateLeadDiagnosticInSupabase } from '../src/lib/supabaseServer.ts';
+import { updateLeadDiagnosticInSupabase } from '../src/lib/supabaseServer.js';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
