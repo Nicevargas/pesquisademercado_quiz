@@ -22,6 +22,21 @@ export function getClientSupabase(): SupabaseClient | null {
   return null;
 }
 
+function parseDiagnosticField(data: any): any {
+  if (!data) return null;
+  const raw = data.diagnostic_data || data.diagnostic || data.diagnosticData;
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function saveLeadDirectToSupabase(leadData: any) {
   const client = getClientSupabase();
   if (!client) {
@@ -33,7 +48,7 @@ export async function saveLeadDirectToSupabase(leadData: any) {
   }
 
   try {
-    const { data, error } = await client.from('leads').insert({
+    const payload: any = {
       id: leadData.id || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       nome: leadData.nome,
       whatsapp: leadData.whatsapp,
@@ -41,12 +56,18 @@ export async function saveLeadDirectToSupabase(leadData: any) {
       empresa: leadData.empresa,
       instagram: leadData.instagram || null,
       site: leadData.site || null,
-      atividade_principal: leadData.atividadePrincipal || null,
-      faturamento_mensal: leadData.faturamentoMensal || null,
-      principal_desafio: leadData.principalDesafio || null,
-      canais_marketing: leadData.canaisMarketing || null,
+      atividade_principal: leadData.atividadePrincipal || leadData.atividade_principal || null,
+      faturamento_mensal: leadData.faturamentoMensal || leadData.faturamento_mensal || null,
+      principal_desafio: leadData.principalDesafio || leadData.principal_desafio || null,
+      canais_marketing: leadData.canaisMarketing || leadData.canais_marketing || null,
       created_at: leadData.createdAt || new Date().toISOString(),
-    }).select();
+    };
+
+    if (leadData.diagnostic) {
+      payload.diagnostic_data = leadData.diagnostic;
+    }
+
+    const { data, error } = await client.from('leads').upsert(payload).select();
 
     if (error) {
       console.error('Direct client-side Supabase insert error:', error.message);
@@ -56,6 +77,33 @@ export async function saveLeadDirectToSupabase(leadData: any) {
   } catch (err: any) {
     console.error('Direct client-side Supabase unexpected error:', err);
     return { success: false, error: err?.message || 'Unexpected error' };
+  }
+}
+
+export async function updateLeadDiagnosticDirectInSupabase(leadId: string, diagnosticData: any) {
+  const client = getClientSupabase();
+  if (!client || !leadId) return null;
+
+  try {
+    // Try diagnostic_data first
+    let res = await client
+      .from('leads')
+      .update({ diagnostic_data: diagnosticData })
+      .eq('id', leadId)
+      .select();
+
+    if (res.error) {
+      // Try diagnostic column
+      res = await client
+        .from('leads')
+        .update({ diagnostic: diagnosticData })
+        .eq('id', leadId)
+        .select();
+    }
+    return res.data;
+  } catch (e) {
+    console.error('Error updating diagnostic direct:', e);
+    return null;
   }
 }
 
@@ -82,12 +130,12 @@ export async function fetchLeadsDirectFromSupabase() {
       empresa: item.empresa,
       instagram: item.instagram,
       site: item.site,
-      atividadePrincipal: item.atividade_principal,
-      faturamentoMensal: item.faturamento_mensal,
-      principalDesafio: item.principal_desafio,
-      canaisMarketing: item.canais_marketing,
-      createdAt: item.created_at,
-      diagnostic: item.diagnostic_data,
+      atividadePrincipal: item.atividade_principal || item.atividadePrincipal,
+      faturamentoMensal: item.faturamento_mensal || item.faturamentoMensal,
+      principalDesafio: item.principal_desafio || item.principalDesafio,
+      canaisMarketing: item.canais_marketing || item.canaisMarketing,
+      createdAt: item.created_at || item.createdAt,
+      diagnostic: parseDiagnosticField(item),
     }));
   } catch (e) {
     console.error('Direct client fetch unexpected error:', e);
@@ -97,7 +145,7 @@ export async function fetchLeadsDirectFromSupabase() {
 
 export async function fetchSingleLeadDirectFromSupabase(leadId: string) {
   const client = getClientSupabase();
-  if (!client) return null;
+  if (!client || !leadId) return null;
 
   try {
     const { data, error } = await client
@@ -119,12 +167,12 @@ export async function fetchSingleLeadDirectFromSupabase(leadId: string) {
       empresa: data.empresa,
       instagram: data.instagram,
       site: data.site,
-      atividadePrincipal: data.atividade_principal,
-      faturamentoMensal: data.faturamento_mensal,
-      principalDesafio: data.principal_desafio,
-      canaisMarketing: data.canais_marketing,
-      createdAt: data.created_at,
-      diagnostic: data.diagnostic_data,
+      atividadePrincipal: data.atividade_principal || data.atividadePrincipal,
+      faturamentoMensal: data.faturamento_mensal || data.faturamentoMensal,
+      principalDesafio: data.principal_desafio || data.principalDesafio,
+      canaisMarketing: data.canais_marketing || data.canaisMarketing,
+      createdAt: data.created_at || data.createdAt,
+      diagnostic: parseDiagnosticField(data),
     };
   } catch (e) {
     console.error('Direct single lead fetch unexpected error:', e);

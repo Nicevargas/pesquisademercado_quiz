@@ -134,18 +134,8 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
           Em breve nossa equipe analisará suas respostas. Se você solicitou o diagnóstico gratuito, entraremos em contato pelo WhatsApp.
         </p>
 
-        {/* WhatsApp & Report Action Buttons */}
+        {/* Report Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href={fullWhatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-95 text-base"
-          >
-            <MessageCircle className="w-5 h-5 fill-current text-white" />
-            <span>DISPARAR RELATÓRIO NO WHATSAPP</span>
-          </a>
-
           <a
             href={webReportUrl}
             target="_blank"
@@ -362,24 +352,6 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Fique atento ao seu WhatsApp e e-mail para receber o material complementar.
           </p>
-        </div>
-      </div>
-
-      {/* Visual Workspace Banner Section */}
-      <div className="rounded-2xl overflow-hidden relative h-64 sm:h-72 shadow-lg border border-slate-200/80 dark:border-slate-800 group">
-        <img
-          src="/src/assets/images/office_workspace_1784945414869.jpg"
-          alt="High tech office workspace for market insights"
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex flex-col justify-end p-6">
-          <div className="text-white">
-            <h4 className="font-bold text-lg sm:text-xl">Sua jornada empreendedora começa aqui.</h4>
-            <p className="text-xs sm:text-sm text-slate-200 opacity-90">
-              Estamos prontos para impulsionar o seu negócio no mercado.
-            </p>
-          </div>
         </div>
       </div>
     </div>

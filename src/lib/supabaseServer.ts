@@ -101,6 +101,21 @@ export async function updateLeadDiagnosticInSupabase(leadId: string, diagnosticD
   }
 }
 
+function parseDiagnosticField(data: any): any {
+  if (!data) return null;
+  const raw = data.diagnostic_data || data.diagnostic || data.diagnosticData;
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function fetchLeadsFromSupabase() {
   const client = getSupabaseClient();
   if (!client) return null;
@@ -124,12 +139,12 @@ export async function fetchLeadsFromSupabase() {
       empresa: item.empresa,
       instagram: item.instagram,
       site: item.site,
-      atividadePrincipal: item.atividade_principal,
-      faturamentoMensal: item.faturamento_mensal,
-      principalDesafio: item.principal_desafio,
-      canaisMarketing: item.canais_marketing,
-      createdAt: item.created_at,
-      diagnostic: item.diagnostic_data,
+      atividadePrincipal: item.atividade_principal || item.atividadePrincipal,
+      faturamentoMensal: item.faturamento_mensal || item.faturamentoMensal,
+      principalDesafio: item.principal_desafio || item.principalDesafio,
+      canaisMarketing: item.canais_marketing || item.canaisMarketing,
+      createdAt: item.created_at || item.createdAt,
+      diagnostic: parseDiagnosticField(item),
     }));
   } catch (err) {
     console.error('Unexpected error fetching leads from Supabase:', err);
@@ -161,12 +176,12 @@ export async function fetchSingleLeadFromSupabase(leadId: string) {
       empresa: data.empresa,
       instagram: data.instagram,
       site: data.site,
-      atividadePrincipal: data.atividade_principal,
-      faturamentoMensal: data.faturamento_mensal,
-      principalDesafio: data.principal_desafio,
-      canaisMarketing: data.canais_marketing,
-      createdAt: data.created_at,
-      diagnostic: data.diagnostic_data,
+      atividadePrincipal: data.atividade_principal || data.atividadePrincipal,
+      faturamentoMensal: data.faturamento_mensal || data.faturamentoMensal,
+      principalDesafio: data.principal_desafio || data.principalDesafio,
+      canaisMarketing: data.canais_marketing || data.canaisMarketing,
+      createdAt: data.created_at || data.createdAt,
+      diagnostic: parseDiagnosticField(data),
     };
   } catch (err) {
     console.error('Unexpected error fetching single lead from Supabase:', err);

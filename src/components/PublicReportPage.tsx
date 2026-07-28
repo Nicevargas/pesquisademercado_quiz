@@ -146,9 +146,37 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
     );
   }
 
-  const diagnostic = lead.diagnostic || {};
+  // Helper to safely parse and fill diagnostic data
+  const rawDiag = typeof lead.diagnostic === 'string' ? (() => {
+    try { return JSON.parse(lead.diagnostic); } catch (e) { return null; }
+  })() : lead.diagnostic;
+
+  const resolvedDiagnostic = {
+    analiseSetor: rawDiag?.analiseSetor || `Análise estratégica personalizada para o setor de ${lead.atividadePrincipal || 'serviços'} focada em solucionar o desafio de ${lead.principalDesafio || 'atração e retenção de clientes'}.`,
+    pontosFortes: Array.isArray(rawDiag?.pontosFortes) && rawDiag.pontosFortes.length > 0
+      ? rawDiag.pontosFortes
+      : [
+          'Agilidade no atendimento e proximidade com clientes',
+          'Flexibilidade para implementação rápida de estratégias digitais'
+        ],
+    oportunidades: Array.isArray(rawDiag?.oportunidades) && rawDiag.oportunidades.length > 0
+      ? rawDiag.oportunidades
+      : [
+          'Otimização da presença no Google Meu Negócio e buscas locais',
+          'Funil automatizado de atração e conversão via WhatsApp'
+        ],
+    planoAcao: Array.isArray(rawDiag?.planoAcao) && rawDiag.planoAcao.length > 0
+      ? rawDiag.planoAcao
+      : [
+          '1. Padronizar a mensagem de saudação e catálogo no WhatsApp',
+          '2. Criar oferta direta de diagnóstico inicial gratuito para novos leads',
+          '3. Estruturar anúncios direcionados para sua região de atuação'
+        ],
+    resumoWhatsapp: rawDiag?.resumoWhatsapp || `Olá ${lead.nome || ''}! Fiz o diagnóstico para a empresa ${lead.empresa || ''}. Podemos conversar sobre as oportunidades?`
+  };
+
   const companyWhatsapp = '5511994637159';
-  const reportText = formatFullReportText(lead, diagnostic);
+  const reportText = formatFullReportText(lead, resolvedDiagnostic);
   const whatsappUrl = `https://wa.me/${companyWhatsapp}?text=${encodeURIComponent(reportText)}`;
 
   return (
@@ -305,7 +333,7 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
               Análise Conjuntural do Setor
             </h4>
             <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800/80 text-sm leading-relaxed text-slate-300">
-              {diagnostic.analiseSetor || 'Análise setorial processada para identificar pontos de alavancagem rápida.'}
+              {resolvedDiagnostic.analiseSetor}
             </div>
           </div>
 
@@ -316,18 +344,12 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
               Pontos Fortes Identificados
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Array.isArray(diagnostic.pontosFortes) && diagnostic.pontosFortes.length > 0 ? (
-                diagnostic.pontosFortes.map((pf: string, idx: number) => (
-                  <div key={idx} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>{pf}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
-                  Pontos fortes mapeados durante a consultoria.
+              {resolvedDiagnostic.pontosFortes.map((pf: string, idx: number) => (
+                <div key={idx} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{pf}</span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
@@ -338,18 +360,12 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
               Oportunidades de Crescimento Rápido
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Array.isArray(diagnostic.oportunidades) && diagnostic.oportunidades.length > 0 ? (
-                diagnostic.oportunidades.map((op: string, idx: number) => (
-                  <div key={idx} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-200">
-                    <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                    <span>{op}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
-                  Oportunidades de vendas digitais prontas para implementação.
+              {resolvedDiagnostic.oportunidades.map((op: string, idx: number) => (
+                <div key={idx} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-200">
+                  <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                  <span>{op}</span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
@@ -360,38 +376,22 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
               Plano de Ação Recomendado (Etapa a Etapa)
             </h4>
             <div className="space-y-3">
-              {Array.isArray(diagnostic.planoAcao) && diagnostic.planoAcao.length > 0 ? (
-                diagnostic.planoAcao.map((step: string, idx: number) => (
-                  <div key={idx} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex items-start gap-3.5 text-xs text-slate-200">
-                    <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shrink-0">
-                      {idx + 1}
-                    </div>
-                    <div className="pt-0.5 leading-relaxed">{step}</div>
+              {resolvedDiagnostic.planoAcao.map((step: string, idx: number) => (
+                <div key={idx} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex items-start gap-3.5 text-xs text-slate-200">
+                  <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shrink-0">
+                    {idx + 1}
                   </div>
-                ))
-              ) : (
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
-                  Passos para alavancagem de mercado.
+                  <div className="pt-0.5 leading-relaxed">{step}</div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Floating / Sticky Action Bar */}
+        {/* Action Bar */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 text-center">
           <h3 className="text-sm font-bold text-slate-200">Ações para este Relatório Web</h3>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition-all active:scale-95 text-sm"
-            >
-              <MessageCircle className="w-5 h-5 fill-current" />
-              <span>Enviar pelo WhatsApp</span>
-            </a>
-
             <button
               onClick={handleCopyShareLink}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-3.5 rounded-xl transition-all active:scale-95 text-sm"

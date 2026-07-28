@@ -8,7 +8,7 @@ import { SuccessView } from './components/SuccessView';
 import { LeadsDashboard } from './components/LeadsDashboard';
 import { PublicReportPage } from './components/PublicReportPage';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase } from './lib/supabaseClient';
+import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase, updateLeadDiagnosticDirectInSupabase } from './lib/supabaseClient';
 
 export default function App() {
   // Check if URL has ?relatorio=ID or ?id=ID or hash #relatorio/ID
@@ -123,12 +123,16 @@ export default function App() {
   // Handle Lead Form Submission & AI Generation
   const handleLeadSubmit = async (data: LeadFormData) => {
     setIsSubmittingLead(true);
-    setLeadData(data);
 
-    const payload = {
+    const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const fullLeadData: SubmissionData = {
+      id: leadId,
+      createdAt: new Date().toISOString(),
       ...data,
       ...answers,
     };
+
+    setLeadData(fullLeadData);
 
     try {
       // 1. Dual save: Try backend API AND direct Supabase insert
@@ -137,7 +141,7 @@ export default function App() {
         const apiRes = await fetch('/api/leads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(fullLeadData),
         });
         if (apiRes.ok) {
           const apiJson = await apiRes.json();
@@ -147,9 +151,9 @@ export default function App() {
         console.warn('Backend /api/leads failed or unreachable, relying on direct client Supabase sync:', apiErr);
       }
 
-      // If API didn't sync to Supabase (e.g. pure Vercel static deployment or missing server env), save directly from browser
+      // If API didn't sync to Supabase, save directly from browser
       if (!apiSuccess) {
-        await saveLeadDirectToSupabase(payload);
+        await saveLeadDirectToSupabase(fullLeadData);
       }
 
       fetchLeadCount();
@@ -160,21 +164,50 @@ export default function App() {
 
       // 3. Request Real AI Diagnostic from Gemini
       setIsLoadingDiagnostic(true);
+      let generatedDiagnostic: DiagnosticResult | null = null;
+
       try {
         const diagRes = await fetch('/api/diagnostico', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(fullLeadData),
         });
         if (diagRes.ok) {
           const diagJson = await diagRes.json();
           if (diagJson.success && diagJson.data) {
+            generatedDiagnostic = diagJson.data;
             setDiagnostic(diagJson.data);
           }
         }
       } catch (diagErr) {
         console.warn('Diagnostic API call error:', diagErr);
       }
+
+      // Fallback diagnostic if API was unreachable or didn't return data
+      if (!generatedDiagnostic) {
+        generatedDiagnostic = {
+          analiseSetor: `Análise personalizada para o setor de ${fullLeadData.atividadePrincipal || 'serviços'} focada em superar o desafio de ${fullLeadData.principalDesafio || 'atração de clientes'}.`,
+          pontosFortes: [
+            'Atuação direta com demanda real de mercado e proximidade com clientes',
+            'Flexibilidade para implementação rápida de novidades digitais',
+          ],
+          oportunidades: [
+            'Otimização da presença na busca local (Google Meu Negócio)',
+            'Funil automatizado de captação de leads pelo WhatsApp',
+          ],
+          planoAcao: [
+            '1. Padronizar o atendimento inicial com mensagens rápidas e automáticas',
+            '2. Criar oferta irresistível de diagnóstico inicial gratuito',
+            '3. Estruturar anúncios direcionados para a sua região',
+          ],
+          resumoWhatsapp: `Olá ${fullLeadData.nome || ''}! Fiz seu diagnóstico do projeto ${fullLeadData.empresa || ''} no setor de ${fullLeadData.atividadePrincipal || 'mercado'}. Podemos conversar sobre o plano de ação?`,
+        };
+        setDiagnostic(generatedDiagnostic);
+      }
+
+      // Ensure diagnostic is persisted to Supabase for public web report page
+      await updateLeadDiagnosticDirectInSupabase(leadId, generatedDiagnostic);
+
     } catch (err) {
       console.error('Error in submission flow:', err);
       setCurrentStep(6);
