@@ -1,4 +1,4 @@
-import { fetchSingleLeadFromSupabase } from '../src/lib/supabaseServer.ts';
+import { fetchSingleLeadFromSupabase } from '../src/lib/supabaseServer.js';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
