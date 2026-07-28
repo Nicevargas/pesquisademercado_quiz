@@ -1,4 +1,4 @@
-import { saveLeadToSupabase, fetchLeadsFromSupabase } from '../src/lib/supabaseServer.ts';
+import { saveLeadToSupabase, fetchLeadsFromSupabase } from '../src/lib/supabaseServer.js';
 
 // Memory fallback for serverless invocation instance
 const memoryLeads: any[] = [];
