@@ -8,6 +8,7 @@ interface SuccessViewProps {
   answers: QuizAnswers;
   diagnostic: DiagnosticResult | null;
   isLoadingDiagnostic: boolean;
+  onOpenReport?: (reportId: string) => void;
 }
 
 export const SuccessView: React.FC<SuccessViewProps> = ({
@@ -15,6 +16,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
   answers,
   diagnostic,
   isLoadingDiagnostic,
+  onOpenReport,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [copied, setCopied] = useState(false);
@@ -136,16 +138,20 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
 
         {/* Report Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href={webReportUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-600/30 transition-all duration-200 active:scale-95 text-base"
+          <button
+            onClick={() => {
+              if (onOpenReport) {
+                onOpenReport(lead.id);
+              } else {
+                window.location.href = webReportUrl;
+              }
+            }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-600/30 transition-all duration-200 active:scale-95 text-base cursor-pointer"
           >
             <Globe className="w-5 h-5 text-white" />
             <span>Acessar Relatório Web</span>
             <ExternalLink className="w-4 h-4 opacity-80" />
-          </a>
+          </button>
 
           <button
             onClick={handleCopyWebLink}

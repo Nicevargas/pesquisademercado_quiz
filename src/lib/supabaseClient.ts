@@ -143,39 +143,85 @@ export async function fetchLeadsDirectFromSupabase() {
   }
 }
 
+export function saveLocalReport(lead: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    const existing = JSON.parse(localStorage.getItem('curtatche_reports') || '{}');
+    existing[lead.id] = lead;
+    localStorage.setItem('curtatche_reports', JSON.stringify(existing));
+
+    const list = JSON.parse(localStorage.getItem('curtatche_all_leads') || '[]');
+    const idx = list.findIndex((item: any) => item.id === lead.id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...lead };
+    } else {
+      list.unshift(lead);
+    }
+    localStorage.setItem('curtatche_all_leads', JSON.stringify(list));
+  } catch (e) {
+    console.warn('Could not save local report cache:', e);
+  }
+}
+
+export function getLocalReport(reportId: string): any | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const existing = JSON.parse(localStorage.getItem('curtatche_reports') || '{}');
+    if (existing[reportId]) return existing[reportId];
+
+    const list = JSON.parse(localStorage.getItem('curtatche_all_leads') || '[]');
+    const found = list.find((item: any) => item.id === reportId || item.id?.includes(reportId));
+    if (found) return found;
+  } catch (e) {
+    console.warn('Could not get local report cache:', e);
+  }
+  return null;
+}
+
 export async function fetchSingleLeadDirectFromSupabase(leadId: string) {
+  // 1. Try local cache first if available
+  const local = getLocalReport(leadId);
+
   const client = getClientSupabase();
-  if (!client || !leadId) return null;
+  if (!client || !leadId) return local;
 
   try {
-    const { data, error } = await client
+    let { data, error } = await client
       .from('leads')
       .select('*')
-      .eq('id', leadId)
-      .single();
+      .eq('id', leadId);
 
-    if (error || !data) {
-      console.error('Direct single lead fetch error:', error?.message);
-      return null;
+    if (error || !data || data.length === 0) {
+      // Fallback: try fetching list and filtering
+      const allLeads = await fetchLeadsDirectFromSupabase();
+      if (allLeads && allLeads.length > 0) {
+        const matched = allLeads.find(l => l.id === leadId || l.id?.includes(leadId));
+        if (matched) return matched;
+      }
+      return local;
     }
 
-    return {
-      id: data.id,
-      nome: data.nome,
-      whatsapp: data.whatsapp,
-      email: data.email,
-      empresa: data.empresa,
-      instagram: data.instagram,
-      site: data.site,
-      atividadePrincipal: data.atividade_principal || data.atividadePrincipal,
-      faturamentoMensal: data.faturamento_mensal || data.faturamentoMensal,
-      principalDesafio: data.principal_desafio || data.principalDesafio,
-      canaisMarketing: data.canais_marketing || data.canaisMarketing,
-      createdAt: data.created_at || data.createdAt,
-      diagnostic: parseDiagnosticField(data),
+    const item = data[0];
+    const result = {
+      id: item.id,
+      nome: item.nome,
+      whatsapp: item.whatsapp,
+      email: item.email,
+      empresa: item.empresa,
+      instagram: item.instagram,
+      site: item.site,
+      atividadePrincipal: item.atividade_principal || item.atividadePrincipal,
+      faturamentoMensal: item.faturamento_mensal || item.faturamentoMensal,
+      principalDesafio: item.principal_desafio || item.principalDesafio,
+      canaisMarketing: item.canais_marketing || item.canaisMarketing,
+      createdAt: item.created_at || item.createdAt,
+      diagnostic: parseDiagnosticField(item) || local?.diagnostic,
     };
+
+    saveLocalReport(result);
+    return result;
   } catch (e) {
     console.error('Direct single lead fetch unexpected error:', e);
-    return null;
+    return local;
   }
 }

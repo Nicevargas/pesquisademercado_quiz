@@ -21,15 +21,16 @@ import {
   TrendingUp,
   FileText
 } from 'lucide-react';
-import { fetchSingleLeadDirectFromSupabase } from '../lib/supabaseClient';
+import { fetchSingleLeadDirectFromSupabase, getLocalReport, fetchLeadsDirectFromSupabase } from '../lib/supabaseClient';
 import { formatFullReportText } from '../lib/webhookAutoSend';
 
 interface PublicReportPageProps {
   reportId: string;
   onBackToHome?: () => void;
+  onNewDiagnostic?: () => void;
 }
 
-export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, onBackToHome }) => {
+export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, onBackToHome, onNewDiagnostic }) => {
   const [lead, setLead] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +41,16 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
     let isMounted = true;
 
     async function loadReport() {
-      setIsLoading(true);
       setError(null);
+
+      // 0. Check local report cache first for instant display
+      const localData = getLocalReport(reportId);
+      if (localData && isMounted) {
+        setLead(localData);
+        setIsLoading(false);
+      } else {
+        setIsLoading(true);
+      }
 
       try {
         // 1. Try server endpoint
@@ -67,16 +76,29 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
           return;
         }
 
-        if (isMounted) {
+        // 3. Fallback: search all leads in Supabase
+        const allLeads = await fetchLeadsDirectFromSupabase();
+        if (allLeads && allLeads.length > 0) {
+          const match = allLeads.find((l: any) => l.id === reportId || l.id?.includes(reportId));
+          if (match && isMounted) {
+            setLead(match);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        if (!localData && isMounted) {
           setError('Relatório não encontrado no banco de dados. Verifique o ID digitado ou o link acessado.');
           setIsLoading(false);
         }
       } catch (err: any) {
         console.warn('Error fetching public report:', err);
-        // Direct fallback
         const directLead = await fetchSingleLeadDirectFromSupabase(reportId);
         if (directLead && isMounted) {
           setLead(directLead);
+          setIsLoading(false);
+        } else if (localData && isMounted) {
+          setLead(localData);
           setIsLoading(false);
         } else if (isMounted) {
           setError('Não foi possível carregar o relatório no momento. Tente novamente mais tarde.');
@@ -188,10 +210,11 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
             {onBackToHome && (
               <button
                 onClick={onBackToHome}
-                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-100 transition-colors"
-                title="Voltar ao início"
+                className="px-3 py-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold border border-slate-700/60"
+                title="Voltar ao Relatório / Diagnóstico"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Voltar</span>
               </button>
             )}
             <div>
@@ -203,6 +226,15 @@ export const PublicReportPage: React.FC<PublicReportPageProps> = ({ reportId, on
           </div>
 
           <div className="flex items-center gap-2">
+            {onNewDiagnostic && (
+              <button
+                onClick={onNewDiagnostic}
+                className="hidden md:inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl transition-all border border-slate-700"
+              >
+                <span>Novo Diagnóstico</span>
+              </button>
+            )}
+
             <button
               onClick={handleCopyShareLink}
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md active:scale-95"

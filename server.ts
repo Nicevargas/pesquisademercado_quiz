@@ -37,11 +37,11 @@ const leadsDatabase: StoredLead[] = [];
 
 // Initialize Gemini AI Client lazily or when API key is available
 let aiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenAI | null {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY not configured in environment.");
+      return null;
     }
     aiClient = new GoogleGenAI({
       apiKey,
@@ -98,7 +98,7 @@ async function startServer() {
   // Submit new lead survey
   app.post("/api/leads", async (req, res) => {
     try {
-      const payload: LeadPayload = req.body;
+      const payload: LeadPayload = req.body || {};
       const newLead: StoredLead = {
         ...payload,
         id: payload.id || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -109,9 +109,14 @@ async function startServer() {
       leadsDatabase.unshift(newLead);
 
       // Attempt to save to Supabase
-      const supabaseResult = await saveLeadToSupabase(newLead);
+      let supabaseResult: any = null;
+      try {
+        supabaseResult = await saveLeadToSupabase(newLead);
+      } catch (sbErr) {
+        console.warn("Supabase save error in /api/leads:", sbErr);
+      }
 
-      res.json({
+      return res.json({
         success: true,
         lead: newLead,
         supabaseSynced: Boolean(supabaseResult?.success),
@@ -119,18 +124,32 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error("Error saving lead:", err);
-      res.status(500).json({ success: false, error: err.message || "Failed to save lead." });
+      // Return 200 with graceful fallback so frontend flow never breaks
+      const fallbackLead = {
+        ...(req.body || {}),
+        id: req.body?.id || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: new Date().toISOString(),
+      };
+      return res.json({
+        success: true,
+        lead: fallbackLead,
+        supabaseSynced: false,
+        warning: err.message || "Failed to save lead to persistent store."
+      });
     }
   });
 
   // Generate Real AI Diagnostic via Gemini & save to Supabase
   app.post("/api/diagnostico", async (req, res) => {
+    const body = req.body || {};
+    const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = body;
+
+    let parsed: any = null;
+
     try {
-      const { id, atividadePrincipal, faturamentoMensal, principalDesafio, canaisMarketing, nome, empresa, instagram, site } = req.body;
-
       const ai = getGeminiClient();
-
-      const prompt = `
+      if (ai) {
+        const prompt = `
 Você é um consultor de inteligência de mercado sênior especialista em pequenos negócios, startups e empreendedores (Tchê Tech Insights).
 Análise os dados fornecidos pelo empreendedor:
 - Nome do Empreendedor: ${nome || 'Empreendedor'}
@@ -154,76 +173,56 @@ Gere um diagnóstico de mercado estruturado em formato JSON rigoroso contendo:
 Responda SOMENTE em JSON válido sem marcação de código extra.
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          temperature: 0.7,
-        },
-      });
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            temperature: 0.7,
+          },
+        });
 
-      const text = response.text || "{}";
-      let parsed = {};
-      try {
+        const text = response.text || "{}";
         parsed = JSON.parse(text);
-      } catch (e) {
-        parsed = {
-          analiseSetor: `Análise personalizada para o setor de ${atividadePrincipal || 'serviços'} focada em superar o desafio de ${principalDesafio || 'atração de clientes'}.`,
-          pontosFortes: [
-            "Atuação direta com demanda real de mercado",
-            "Flexibilidade para implementação rápida de novidades digitais"
-          ],
-          oportunidades: [
-            "Otimização da presença na busca local (Google Meu Negócio)",
-            "Funil de captação de leads direto pelo WhatsApp"
-          ],
-          planoAcao: [
-            "1. Padronizar o atendimento inicial com mensagens automáticas",
-            "2. Criar oferta irresistível de diagnóstico inicial gratuito",
-            "3. Estruturar anúncios direcionados para a sua região"
-          ],
-          resumoWhatsapp: `Olá ${nome || ''}! Fiz seu diagnóstico do projeto ${empresa || ''} no setor de ${atividadePrincipal || 'mercado'}. Podemos conversar sobre o plano de ação?`
-        };
       }
-
-      // Update lead with diagnostic in local memory
-      if (id) {
-        const found = leadsDatabase.find(l => l.id === id);
-        if (found) {
-          found.diagnostic = parsed;
-        }
-        // Update in Supabase
-        await updateLeadDiagnosticInSupabase(id, parsed);
-      }
-
-      res.json({ success: true, data: parsed });
     } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      const fallback = {
-        analiseSetor: "Análise estratégica gerada com foco no crescimento sustentável do seu negócio e consolidação de marca no mercado local.",
+      console.warn("Gemini API call warning in server.ts:", error?.message || error);
+    }
+
+    if (!parsed) {
+      parsed = {
+        analiseSetor: `Análise personalizada para o setor de ${atividadePrincipal || 'serviços'} focada em superar o desafio de ${principalDesafio || 'atração de clientes'}.`,
         pontosFortes: [
-          "Presença ativa no segmento com alto potencial de recomendação",
-          "Agilidade na tomada de decisão em comparação a grandes concorrentes"
+          "Atuação direta com demanda real de mercado",
+          "Flexibilidade para implementação rápida de novidades digitais"
         ],
         oportunidades: [
-          "Automação do funil de WhatsApp para dobrar a taxa de resposta",
-          "Investimento em tráfego pago geolocalizado com foco em conversão"
+          "Otimização da presença na busca local (Google Meu Negócio)",
+          "Funil de captação de leads direto pelo WhatsApp"
         ],
         planoAcao: [
-          "Etapa 1: Estruturar catálogo de serviços/produtos com foco no carro-chefe",
-          "Etapa 2: Implementar canal ativo de vendas e captação diária de leads",
-          "Etapa 3: Monitorar métricas de conversão e custo de aquisição"
+          "1. Padronizar o atendimento inicial com mensagens automáticas",
+          "2. Criar oferta irresistível de diagnóstico inicial gratuito",
+          "3. Estruturar anúncios direcionados para a sua região"
         ],
-        resumoWhatsapp: "Olá! Acabei de gerar o diagnóstico completo para o seu projeto. Vamos conversar sobre as oportunidades?"
+        resumoWhatsapp: `Olá ${nome || ''}! Fiz seu diagnóstico do projeto ${empresa || ''} no setor de ${atividadePrincipal || 'mercado'}. Podemos conversar sobre o plano de ação?`
       };
-
-      if (req.body.id) {
-        await updateLeadDiagnosticInSupabase(req.body.id, fallback);
-      }
-
-      res.json({ success: true, data: fallback });
     }
+
+    // Update lead with diagnostic in local memory
+    if (id) {
+      const found = leadsDatabase.find(l => l.id === id);
+      if (found) {
+        found.diagnostic = parsed;
+      }
+      try {
+        await updateLeadDiagnosticInSupabase(id, parsed);
+      } catch (sbErr) {
+        console.warn("Could not save diagnostic to Supabase:", sbErr);
+      }
+    }
+
+    return res.json({ success: true, data: parsed });
   });
 
   // Get single lead report by ID

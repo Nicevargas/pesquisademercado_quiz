@@ -8,7 +8,7 @@ import { SuccessView } from './components/SuccessView';
 import { LeadsDashboard } from './components/LeadsDashboard';
 import { PublicReportPage } from './components/PublicReportPage';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase, updateLeadDiagnosticDirectInSupabase } from './lib/supabaseClient';
+import { saveLeadDirectToSupabase, fetchLeadsDirectFromSupabase, updateLeadDiagnosticDirectInSupabase, saveLocalReport } from './lib/supabaseClient';
 
 export default function App() {
   // Check if URL has ?relatorio=ID or ?id=ID or hash #relatorio/ID
@@ -114,6 +114,10 @@ export default function App() {
 
   // Back Step Action
   const handleGoBack = () => {
+    if (currentStep === 6 && leadData) {
+      setPublicReportId(leadData.id);
+      return;
+    }
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -205,6 +209,9 @@ export default function App() {
         setDiagnostic(generatedDiagnostic);
       }
 
+      // Cache report locally for instant load on this browser
+      saveLocalReport({ ...fullLeadData, diagnostic: generatedDiagnostic });
+
       // Ensure diagnostic is persisted to Supabase for public web report page
       await updateLeadDiagnosticDirectInSupabase(leadId, generatedDiagnostic);
 
@@ -228,6 +235,18 @@ export default function App() {
             window.history.pushState({}, '', window.location.pathname);
           }
           setPublicReportId(null);
+          setCurrentStep(6);
+        }}
+        onNewDiagnostic={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', window.location.pathname);
+          }
+          setPublicReportId(null);
+          setLeadData(null);
+          setAnswers({});
+          setSelectedOptionsByStep({});
+          setDiagnostic(null);
+          setCurrentStep(1);
         }}
       />
     );
@@ -272,6 +291,12 @@ export default function App() {
               answers={answers}
               diagnostic={diagnostic}
               isLoadingDiagnostic={isLoadingDiagnostic}
+              onOpenReport={(reportId) => {
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', `/?relatorio=${encodeURIComponent(reportId)}`);
+                }
+                setPublicReportId(reportId);
+              }}
             />
           )}
         </div>

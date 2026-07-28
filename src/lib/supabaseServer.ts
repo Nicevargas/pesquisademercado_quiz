@@ -160,28 +160,33 @@ export async function fetchSingleLeadFromSupabase(leadId: string) {
     const { data, error } = await client
       .from('leads')
       .select('*')
-      .eq('id', leadId)
-      .single();
+      .eq('id', leadId);
 
-    if (error || !data) {
-      console.error('Error fetching single lead from Supabase:', error?.message);
+    if (error || !data || data.length === 0) {
+      // Fallback: search across all leads
+      const allLeads = await fetchLeadsFromSupabase();
+      if (allLeads && allLeads.length > 0) {
+        const found = allLeads.find(l => l.id === leadId || l.id?.includes(leadId));
+        if (found) return found;
+      }
       return null;
     }
 
+    const item = data[0];
     return {
-      id: data.id,
-      nome: data.nome,
-      whatsapp: data.whatsapp,
-      email: data.email,
-      empresa: data.empresa,
-      instagram: data.instagram,
-      site: data.site,
-      atividadePrincipal: data.atividade_principal || data.atividadePrincipal,
-      faturamentoMensal: data.faturamento_mensal || data.faturamentoMensal,
-      principalDesafio: data.principal_desafio || data.principalDesafio,
-      canaisMarketing: data.canais_marketing || data.canaisMarketing,
-      createdAt: data.created_at || data.createdAt,
-      diagnostic: parseDiagnosticField(data),
+      id: item.id,
+      nome: item.nome,
+      whatsapp: item.whatsapp,
+      email: item.email,
+      empresa: item.empresa,
+      instagram: item.instagram,
+      site: item.site,
+      atividadePrincipal: item.atividade_principal || item.atividadePrincipal,
+      faturamentoMensal: item.faturamento_mensal || item.faturamentoMensal,
+      principalDesafio: item.principal_desafio || item.principalDesafio,
+      canaisMarketing: item.canais_marketing || item.canaisMarketing,
+      createdAt: item.created_at || item.createdAt,
+      diagnostic: parseDiagnosticField(item),
     };
   } catch (err) {
     console.error('Unexpected error fetching single lead from Supabase:', err);
